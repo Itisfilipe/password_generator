@@ -1,4 +1,7 @@
 defmodule PasswordGeneratorTest do
+  @moduledoc """
+  Tests for `PasswordGenerator`.
+  """
   use ExUnit.Case
   doctest PasswordGenerator
 

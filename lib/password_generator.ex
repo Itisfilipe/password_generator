@@ -27,24 +27,30 @@ defmodule PasswordGenerator do
   }
 
   def generate(length, options \\ %{}) do
-    validate_options(options)
-    |> validate_length(length)
-    |> generate_password_string(length)
-  end
-
-  defp generate_password_string(options, length) when is_map(options) and is_integer(length) do
     password =
-      generate_values(options, length)
-      |> String.split("", trim: true)
-      |> Enum.shuffle()
-      |> Enum.join()
+      parse_options(options)
+      |> validate_length(length)
+      |> generate_password(length)
+      |> shuffle_password
 
-    {:success, password}
+    case password do
+      {:error, _} ->
+        password
+
+      _ ->
+        {:success, password}
+    end
   end
 
-  defp generate_password_string({:error, _} = error, _), do: error
+  defp shuffle_password(password) when is_bitstring(password) do
+    String.split(password, "", trim: true)
+    |> Enum.shuffle()
+    |> Enum.join()
+  end
 
-  defp generate_values(options, length)
+  defp shuffle_password({:error, _} = error), do: error
+
+  defp generate_password(options, length)
        when is_map(options) and is_integer(length) and length > 0 do
     password_value =
       Map.filter(options, fn {_, v} -> v end)
@@ -53,12 +59,14 @@ defmodule PasswordGenerator do
       |> passible_password_values
       |> Enum.random()
 
-    password_value <> generate_values(options, length - 1)
+    password_value <> generate_password(options, length - 1)
   end
 
-  defp generate_values(options, 0) when is_map(options) do
+  defp generate_password(options, 0) when is_map(options) do
     ""
   end
+
+  defp generate_password({:error, _} = error, _), do: error
 
   defp options_keys_are_valid(options) when is_map(options) do
     valid =
@@ -112,16 +120,16 @@ defmodule PasswordGenerator do
     {:error, "Length must be an integer"}
   end
 
-  defp validate_options(options) when is_map(options) do
+  defp parse_options(options) when is_map(options) do
     options_keys_are_valid(options)
     |> all_options_are_booleans()
     |> extract_selected_options()
     |> default_options_if_nothing_selected()
   end
 
-  defp validate_options({:error, _} = error), do: error
+  defp parse_options({:error, _} = error), do: error
 
-  defp validate_options(_) do
+  defp parse_options(_) do
     {:error, "The options attribute must be a map"}
   end
 
